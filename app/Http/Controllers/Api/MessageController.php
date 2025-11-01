@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Message;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+// 1. Import the Mail facade and your new Mailable
+use Illuminate\Support\Facades\Mail;
+use App\Mail\NewMessageReceived;
 
 class MessageController extends Controller
 {
@@ -15,7 +18,6 @@ class MessageController extends Controller
     public function store(Request $request)
     {
         // --- THIS IS YOUR SECURITY ---
-        // Validate the incoming data
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
@@ -30,17 +32,24 @@ class MessageController extends Controller
             ], 422); // 422 is 'Unprocessable Entity'
         }
 
-        // If validation passes, create and save the message
-        $message = new Message();
-        $message->name = $request->name;
-        $message->email = $request->email;
-        $message->message = $request->message;
-        $message->save();
+        // --- UPDATED PART ---
+        // Create and save the message
+        $message = Message::create($validator->validated());
 
-        // Send a success response
+        // --- 2. SEND THE EMAIL ---
+        // After saving, send the email to your personal address
+      try {
+    Mail::to('romark7bayan@gmail.com')->send(new NewMessageReceived($message));
+} catch (\Exception $e) {
+    // Temporarily return the exact error message
+    return response()->json([
+        'success' => false,
+        'error_message' => $e->getMessage()
+    ], 500);
+}
+
         return response()->json([
-            'success' => true,
-            'message' => 'Thank you for your message! I will get back to you soon.'
-        ], 201); // 201 means 'Created'
+            'success' => true
+        ]);
     }
 }
